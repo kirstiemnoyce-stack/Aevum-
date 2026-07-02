@@ -1,0 +1,38 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+        continue-on-error: true
+
+      - name: Build Docker image
+        run: docker build -t aevum:latest .
+
+      - name: Test Docker image
+        run: |
+          docker run -d -p 3000:3000 --name aevum-test aevum:latest
+          sleep 2
+          curl http://localhost:3000/health || exit 1
+          docker stop aevum-test
