@@ -10,22 +10,43 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: aevum_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: aevum_test
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run tests
         run: npm test
-        continue-on-error: true
 
       - name: Build Docker image
         run: docker build -t aevum:latest .
@@ -33,6 +54,15 @@ jobs:
       - name: Test Docker image
         run: |
           docker run -d -p 3000:3000 --name aevum-test aevum:latest
-          sleep 2
-          curl http://localhost:3000/health || exit 1
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/health; then
+              echo "Health check passed"
+              docker stop aevum-test
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Health check failed"
+          docker logs aevum-test
           docker stop aevum-test
+          exit 1
