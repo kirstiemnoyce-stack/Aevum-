@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const db = require('./db');
 
 const app = express();
@@ -6,6 +7,15 @@ const PORT = process.env.PORT || 3000;
 const APP_NAME = 'Aevum';
 const APP_VERSION = '1.0.0';
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+app.use(limiter);
 app.use(express.json());
 
 function isNonEmptyString(value) {
