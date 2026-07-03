@@ -14,8 +14,10 @@ function isNonEmptyString(value) {
 
 function isValidEmail(email) {
   if (typeof email !== 'string') return false;
-  // Simple, permissive RFC 5322-ish check
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  // Simple email shape check; avoids ReDoS by rejecting very long input early
+  const trimmed = email.trim();
+  if (trimmed.length > 254) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed);
 }
 
 function validateIdParam(req, res, next) {
