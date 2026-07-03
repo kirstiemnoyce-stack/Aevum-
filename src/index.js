@@ -8,6 +8,25 @@ const APP_VERSION = '1.0.0';
 
 app.use(express.json());
 
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isValidEmail(email) {
+  if (typeof email !== 'string') return false;
+  // Simple, permissive RFC 5322-ish check
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+function validateIdParam(req, res, next) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Invalid id parameter' });
+  }
+  req.params.id = id;
+  next();
+}
+
 // GET all tasks
 app.get('/api/tasks', async (req, res) => {
   try {
@@ -20,7 +39,7 @@ app.get('/api/tasks', async (req, res) => {
 });
 
 // GET single task
-app.get('/api/tasks/:id', async (req, res) => {
+app.get('/api/tasks/:id', validateIdParam, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query('SELECT * FROM tasks WHERE id = $1', [id]);
@@ -38,12 +57,13 @@ app.get('/api/tasks/:id', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
   try {
     const { title, description } = req.body;
-    if (!title) {
-      return res.status(400).json({ error: 'Title is required' });
+    if (!isNonEmptyString(title)) {
+      return res.status(400).json({ error: 'Title is required and must be a non-empty string' });
     }
+    const safeDescription = isNonEmptyString(description) ? description.trim() : '';
     const result = await db.query(
       'INSERT INTO tasks (title, description) VALUES ($1, $2) RETURNING *',
-      [title, description || '']
+      [title.trim(), safeDescription]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -53,13 +73,24 @@ app.post('/api/tasks', async (req, res) => {
 });
 
 // UPDATE task
-app.put('/api/tasks/:id', async (req, res) => {
+app.put('/api/tasks/:id', validateIdParam, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, completed } = req.body;
+
+    if (title !== undefined && !isNonEmptyString(title)) {
+      return res.status(400).json({ error: 'Title must be a non-empty string' });
+    }
+    if (completed !== undefined && typeof completed !== 'boolean') {
+      return res.status(400).json({ error: 'Completed must be a boolean' });
+    }
+
+    const safeTitle = title === undefined ? undefined : title.trim();
+    const safeDescription = description === undefined ? undefined : description.trim();
+
     const result = await db.query(
-      'UPDATE tasks SET title = $1, description = $2, completed = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
-      [title, description, completed, id]
+      'UPDATE tasks SET title = COALESCE($1, title), description = COALESCE($2, description), completed = COALESCE($3, completed), updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
+      [safeTitle, safeDescription, completed, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
@@ -72,7 +103,7 @@ app.put('/api/tasks/:id', async (req, res) => {
 });
 
 // DELETE task
-app.delete('/api/tasks/:id', async (req, res) => {
+app.delete('/api/tasks/:id', validateIdParam, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query('DELETE FROM tasks WHERE id = $1 RETURNING *', [id]);
@@ -101,17 +132,20 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users', async (req, res) => {
   try {
     const { name, email } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Name and email are required' });
+    if (!isNonEmptyString(name)) {
+      return res.status(400).json({ error: 'Name is required and must be a non-empty string' });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'A valid email is required' });
     }
     const result = await db.query(
       'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at',
-      [name, email]
+      [name.trim(), email.trim().toLowerCase()]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(400).json({ error: 'Email already exists' });
+      return res.status(409).json({ error: 'Email already exists' });
     }
     console.error('Database error:', err);
     res.status(500).json({ error: 'Failed to create user' });
@@ -119,7 +153,7 @@ app.post('/api/users', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: `Welcome to ${APP_NAME}! 🚀`,
     version: APP_VERSION,
     description: 'A powerful application for managing time and tasks',
@@ -130,7 +164,7 @@ app.get('/', (req, res) => {
 
 app.get('/health', async (req, res) => {
   try {
-    const result = await db.query('SELECT NOW()');
+    await db.query('SELECT NOW()');
     res.json({ status: 'OK', timestamp: new Date().toISOString(), database: 'connected' });
   } catch (err) {
     res.status(503).json({ status: 'ERROR', timestamp: new Date().toISOString(), database: 'disconnected', error: err.message });
@@ -146,9 +180,11 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 ${APP_NAME} v${APP_VERSION} running on http://localhost:${PORT}`);
-  console.log(`📝 Database: PostgreSQL`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 ${APP_NAME} v${APP_VERSION} running on http://localhost:${PORT}`);
+    console.log(`📝 Database: PostgreSQL`);
+  });
+}
 
 module.exports = app;
