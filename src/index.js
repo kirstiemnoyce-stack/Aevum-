@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const db = require('./db');
+const { pool: db } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;

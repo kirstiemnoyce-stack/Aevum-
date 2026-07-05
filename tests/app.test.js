@@ -1,9 +1,9 @@
 const request = require('supertest');
 const app = require('../src/index');
-const db = require('../src/db');
+const { pool: db, initializeTables } = require('../src/db');
 
 beforeAll(async () => {
-  await db.initializeTables();
+  await initializeTables();
 });
 
 afterAll(async () => {

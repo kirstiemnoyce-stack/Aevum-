@@ -42,5 +42,4 @@ async function initializeTables() {
   }
 }
 
-module.exports = pool;
-module.exports.initializeTables = initializeTables;
+module.exports = { pool, initializeTables };
