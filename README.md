@@ -126,7 +126,10 @@ CREATE TABLE users (
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/users` | Get all users |
+| `GET` | `/api/users/:id` | Get specific user |
 | `POST` | `/api/users` | Create new user |
+| `PUT` | `/api/users/:id` | Update user |
+| `DELETE` | `/api/users/:id` | Delete user |
 
 ### Health Endpoints
 

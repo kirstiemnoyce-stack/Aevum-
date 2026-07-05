@@ -95,6 +95,25 @@ describe('Tasks API', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('PUT /api/tasks/:id rejects invalid description type', async () => {
+    const created = await request(app).post('/api/tasks').send({ title: 'Task' });
+    const res = await request(app)
+      .put(`/api/tasks/${created.body.id}`)
+      .send({ description: 123 });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PUT /api/tasks/:id allows clearing description with empty string', async () => {
+    const created = await request(app)
+      .post('/api/tasks')
+      .send({ title: 'Task', description: 'Will be cleared' });
+    const res = await request(app)
+      .put(`/api/tasks/${created.body.id}`)
+      .send({ description: '' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.description).toBe('');
+  });
+
   it('DELETE /api/tasks/:id removes a task', async () => {
     const created = await request(app).post('/api/tasks').send({ title: 'Delete me' });
     const res = await request(app).delete(`/api/tasks/${created.body.id}`);
@@ -150,6 +169,68 @@ describe('Users API', () => {
       .post('/api/users')
       .send({ name: 'Kirstie2', email: 'kirstie@aevum.app' });
     expect(res.statusCode).toBe(409);
+  });
+
+  it('GET /api/users/:id returns a user', async () => {
+    const created = await request(app).post('/api/users').send({ name: 'Kirstie', email: 'kirstie@aevum.app' });
+    const res = await request(app).get(`/api/users/${created.body.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.id).toBe(created.body.id);
+  });
+
+  it('GET /api/users/:id returns 404 for unknown user', async () => {
+    const res = await request(app).get('/api/users/9999');
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('GET /api/users/:id returns 400 for invalid id', async () => {
+    const res = await request(app).get('/api/users/not-an-id');
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PUT /api/users/:id updates a user partially', async () => {
+    const created = await request(app).post('/api/users').send({ name: 'Kirstie', email: 'kirstie@aevum.app' });
+    const res = await request(app)
+      .put(`/api/users/${created.body.id}`)
+      .send({ name: 'Updated' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.name).toBe('Updated');
+    expect(res.body.email).toBe('kirstie@aevum.app');
+  });
+
+  it('PUT /api/users/:id normalizes email to lowercase', async () => {
+    const created = await request(app).post('/api/users').send({ name: 'Kirstie', email: 'kirstie@aevum.app' });
+    const res = await request(app)
+      .put(`/api/users/${created.body.id}`)
+      .send({ email: 'New@Aevum.APP' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.email).toBe('new@aevum.app');
+  });
+
+  it('PUT /api/users/:id returns 404 for unknown user', async () => {
+    const res = await request(app).put('/api/users/9999').send({ name: 'Ghost' });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('PUT /api/users/:id returns 409 for duplicate email', async () => {
+    await request(app).post('/api/users').send({ name: 'Kirstie', email: 'kirstie@aevum.app' });
+    const other = await request(app).post('/api/users').send({ name: 'Other', email: 'other@aevum.app' });
+    const res = await request(app)
+      .put(`/api/users/${other.body.id}`)
+      .send({ email: 'kirstie@aevum.app' });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('DELETE /api/users/:id removes a user', async () => {
+    const created = await request(app).post('/api/users').send({ name: 'Kirstie', email: 'kirstie@aevum.app' });
+    const res = await request(app).delete(`/api/users/${created.body.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toMatch(/deleted/i);
+  });
+
+  it('DELETE /api/users/:id returns 404 for unknown user', async () => {
+    const res = await request(app).delete('/api/users/9999');
+    expect(res.statusCode).toBe(404);
   });
 });
 
