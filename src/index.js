@@ -93,6 +93,9 @@ app.put('/api/tasks/:id', validateIdParam, async (req, res) => {
     if (title !== undefined && !isNonEmptyString(title)) {
       return res.status(400).json({ error: 'Title must be a non-empty string' });
     }
+    if (description !== undefined && (typeof description !== 'string' || description.trim().length === 0)) {
+      return res.status(400).json({ error: 'Description must be a non-empty string' });
+    }
     if (completed !== undefined && typeof completed !== 'boolean') {
       return res.status(400).json({ error: 'Completed must be a boolean' });
     }
@@ -140,6 +143,21 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// GET single user
+app.get('/api/users/:id', validateIdParam, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query('SELECT id, name, email, created_at FROM users WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
 // CREATE user
 app.post('/api/users', async (req, res) => {
   try {
@@ -161,6 +179,54 @@ app.post('/api/users', async (req, res) => {
     }
     console.error('Database error:', err);
     res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// UPDATE user
+app.put('/api/users/:id', validateIdParam, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email } = req.body;
+
+    if (name !== undefined && !isNonEmptyString(name)) {
+      return res.status(400).json({ error: 'Name must be a non-empty string' });
+    }
+    if (email !== undefined && !isValidEmail(email)) {
+      return res.status(400).json({ error: 'A valid email is required' });
+    }
+
+    const safeName = name === undefined ? undefined : name.trim();
+    const safeEmail = email === undefined ? undefined : email.trim().toLowerCase();
+
+    const result = await db.query(
+      'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email) WHERE id = $3 RETURNING id, name, email, created_at',
+      [safeName, safeEmail, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// DELETE user
+app.delete('/api/users/:id', validateIdParam, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query('DELETE FROM users WHERE id = $1 RETURNING id, name, email, created_at', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ message: 'User deleted successfully', user: result.rows[0] });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
