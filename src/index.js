@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { pool: db } = require('./db');
+const { pool: db, initializeTables } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -259,9 +259,14 @@ app.use((req, res) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🚀 ${APP_NAME} v${APP_VERSION} running on http://localhost:${PORT}`);
-    console.log(`📝 Database: PostgreSQL`);
+  initializeTables().then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 ${APP_NAME} v${APP_VERSION} running on http://localhost:${PORT}`);
+      console.log(`📝 Database: PostgreSQL`);
+    });
+  }).catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
   });
 }
 
