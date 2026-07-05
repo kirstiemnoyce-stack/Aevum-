@@ -103,6 +103,17 @@ describe('Tasks API', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('PUT /api/tasks/:id allows clearing description with empty string', async () => {
+    const created = await request(app)
+      .post('/api/tasks')
+      .send({ title: 'Task', description: 'Will be cleared' });
+    const res = await request(app)
+      .put(`/api/tasks/${created.body.id}`)
+      .send({ description: '' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.description).toBe('');
+  });
+
   it('DELETE /api/tasks/:id removes a task', async () => {
     const created = await request(app).post('/api/tasks').send({ title: 'Delete me' });
     const res = await request(app).delete(`/api/tasks/${created.body.id}`);

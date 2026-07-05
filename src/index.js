@@ -93,8 +93,8 @@ app.put('/api/tasks/:id', validateIdParam, async (req, res) => {
     if (title !== undefined && !isNonEmptyString(title)) {
       return res.status(400).json({ error: 'Title must be a non-empty string' });
     }
-    if (description !== undefined && !isNonEmptyString(description)) {
-      return res.status(400).json({ error: 'Description must be a non-empty string' });
+    if (description !== undefined && typeof description !== 'string') {
+      return res.status(400).json({ error: 'Description must be a string' });
     }
     if (completed !== undefined && typeof completed !== 'boolean') {
       return res.status(400).json({ error: 'Completed must be a boolean' });
