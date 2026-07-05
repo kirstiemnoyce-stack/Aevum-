@@ -38,7 +38,7 @@ async function initializeTables() {
     console.log('✅ Users table ready');
   } catch (err) {
     console.error('❌ Error creating tables:', err);
-    throw new Error(`Failed to initialize database tables: ${err.message}`);
+    throw new Error(`Failed to initialize database tables: ${err.message}`, { cause: err });
   }
 }
 
