@@ -2,6 +2,10 @@ const request = require('supertest');
 const app = require('../src/index');
 const db = require('../src/db');
 
+beforeAll(async () => {
+  await db.initializeTables();
+});
+
 afterAll(async () => {
   await db.end();
 });

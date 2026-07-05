@@ -9,11 +9,6 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'aevum'
 });
 
-pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
-  initializeTables();
-});
-
 pool.on('error', (err) => {
   console.error('❌ Unexpected error on idle client', err);
 });
@@ -43,7 +38,9 @@ async function initializeTables() {
     console.log('✅ Users table ready');
   } catch (err) {
     console.error('❌ Error creating tables:', err);
+    throw err;
   }
 }
 
 module.exports = pool;
+module.exports.initializeTables = initializeTables;
