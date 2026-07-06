@@ -1,6 +1,14 @@
 const request = require('supertest');
 const app = require('../src/index');
 const db = require('../src/db');
+const { initializeTables } = require('../src/initTables');
+
+beforeAll(async () => {
+  // Ensure tables exist before any test runs. The application also creates
+  // tables on pool connect, but that happens asynchronously and can race
+  // with the beforeEach TRUNCATE, so we initialize explicitly here.
+  await initializeTables(db);
+});
 
 afterAll(async () => {
   await db.end();
