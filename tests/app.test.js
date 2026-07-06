@@ -2,6 +2,27 @@ const request = require('supertest');
 const app = require('../src/index');
 const db = require('../src/db');
 
+beforeAll(async () => {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      completed BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+});
+
 afterAll(async () => {
   await db.end();
 });
