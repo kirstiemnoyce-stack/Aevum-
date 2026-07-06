@@ -1,29 +1,13 @@
 const request = require('supertest');
 const app = require('../src/index');
 const db = require('../src/db');
+const { initializeTables } = require('../src/initTables');
 
 beforeAll(async () => {
   // Ensure tables exist before any test runs. The application also creates
   // tables on pool connect, but that happens asynchronously and can race
   // with the beforeEach TRUNCATE, so we initialize explicitly here.
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS tasks (
-      id SERIAL PRIMARY KEY,
-      title VARCHAR(255) NOT NULL,
-      description TEXT,
-      completed BOOLEAN DEFAULT false,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      email VARCHAR(255) UNIQUE NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  await initializeTables(db);
 });
 
 afterAll(async () => {
