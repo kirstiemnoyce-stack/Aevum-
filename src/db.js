@@ -14,6 +14,7 @@ pool.on('connect', () => {
   console.log('✅ Connected to PostgreSQL database');
   initializeTables(pool).catch((err) => {
     console.error('❌ Error creating tables:', err);
+    process.exit(1);
   });
 });
 
