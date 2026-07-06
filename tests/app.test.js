@@ -3,6 +3,9 @@ const app = require('../src/index');
 const db = require('../src/db');
 
 beforeAll(async () => {
+  // Ensure tables exist before any test runs. The application also creates
+  // tables on pool connect, but that happens asynchronously and can race
+  // with the beforeEach TRUNCATE, so we initialize explicitly here.
   await db.query(`
     CREATE TABLE IF NOT EXISTS tasks (
       id SERIAL PRIMARY KEY,
