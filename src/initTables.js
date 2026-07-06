@@ -19,8 +19,17 @@ const CREATE_USERS_TABLE = `
 `;
 
 async function initializeTables(db) {
-  await db.query(CREATE_TASKS_TABLE);
-  await db.query(CREATE_USERS_TABLE);
+  try {
+    await db.query(CREATE_TASKS_TABLE);
+  } catch (err) {
+    throw new Error(`Failed to create tasks table: ${err.message}`);
+  }
+
+  try {
+    await db.query(CREATE_USERS_TABLE);
+  } catch (err) {
+    throw new Error(`Failed to create users table: ${err.message}`);
+  }
 }
 
 module.exports = { initializeTables, CREATE_TASKS_TABLE, CREATE_USERS_TABLE };
