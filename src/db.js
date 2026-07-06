@@ -10,16 +10,16 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'aevum'
 });
 
-let tablesInitialized = false;
+let initPromise = null;
 
 pool.on('connect', () => {
   console.log('✅ Connected to PostgreSQL database');
-  if (tablesInitialized) return;
-  tablesInitialized = true;
-  initializeTables(pool).catch((err) => {
-    console.error('❌ Error creating tables:', err);
-    process.exit(1);
-  });
+  if (!initPromise) {
+    initPromise = initializeTables(pool).catch((err) => {
+      console.error('❌ Error creating tables:', err);
+      process.exit(1);
+    });
+  }
 });
 
 pool.on('error', (err) => {

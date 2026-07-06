@@ -22,13 +22,13 @@ async function initializeTables(db) {
   try {
     await db.query(CREATE_TASKS_TABLE);
   } catch (err) {
-    throw new Error(`Failed to create tasks table: ${err.message}`);
+    throw new Error('Failed to create tasks table', { cause: err });
   }
 
   try {
     await db.query(CREATE_USERS_TABLE);
   } catch (err) {
-    throw new Error(`Failed to create users table: ${err.message}`);
+    throw new Error('Failed to create users table', { cause: err });
   }
 }
 
